@@ -7,14 +7,14 @@ Created on Mon Nov 12 19:10:09 2018
 
 import numpy as np
 import unittest
-from Convolution import convolution
+from Convolution import convolutionFunction
 
 class testFunction(unittest.TestCase):
     def testConvolution(self):
         image = np.array([[1.0,0.0,1.0,0.0,1.0,0.0,1.0,0.0], [1.0,0.0,1.0,0.0,1.0,0.0,1.0,0.0],[1.0,0.0,1.0,0.0,1.0,0.0,1.0,0.0],[1.0,0.0,1.0,0.0,1.0,0.0,1.0,0.0],
                           [1.0,0.0,1.0,0.0,1.0,0.0,1.0,0.0],[1.0,0.0,1.0,0.0,1.0,0.0,1.0,0.0],[1.0,0.0,1.0,0.0,1.0,0.0,1.0,0.0],[1.0,0.0,1.0,0.0,1.0,0.0,1.0,0.0]])
         convolutionFilter = np.array([[1,4,7,4,1],[4,16,26,16,4],[7,26,41,26,7],[4,16,26,16,4],[1,4,7,4,1]])/271.0
-        filteredImage = convolution(convolutionFilter, image)
+        filteredImage = convolutionFunction(convolutionFilter, image)
         print (filteredImage)
         
         self.assertAlmostEquals(filteredImage[2,2], 141.0/271.0)
