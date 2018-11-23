@@ -25,7 +25,7 @@ def euclideanDistance(vector1, vector2):
     return distance
 
 def normalize(vector):
-    return vector/np.sum(vector)
+    return vector/(np.sum(vector) + 1e-10)
 
 def convolutionFunction(convolutionFilters, image):
     convolutionedImage = np.array([cv2.filter2D(image, -1, convolutionFilters[i]) for i in range(len(convolutionFilters))])
@@ -34,7 +34,7 @@ def convolutionFunction(convolutionFilters, image):
 def computeHistogram(image, histogramLevel = 32, histogramRange = None):
     totalPixal = image.shape[0] * image.shape[1]
     if histogramRange == None:
-        histogramRange = [np.min(image), np.max(image) + 0.0001]
+        histogramRange = [np.min(image), np.max(image) + 1e-6]
     bandWidth = (histogramRange[1] - histogramRange[0]) / histogramLevel
     frequency = []
     for i in range(histogramLevel):
