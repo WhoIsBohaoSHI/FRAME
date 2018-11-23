@@ -34,11 +34,10 @@ def convolutionFunction(convolutionFilters, image):
 def computeHistogram(image, histogramLevel = 32, histogramRange = None):
     totalPixal = image.shape[0] * image.shape[1]
     if histogramRange == None:
-        histogramRange = [np.min(image), np.max(image) + 1e-6]
+        histogramRange = [np.min(image), np.max(image) + 1e-10]
     bandWidth = (histogramRange[1] - histogramRange[0]) / histogramLevel
-    frequency = []
-    for i in range(histogramLevel):
-        frequency.append(totalPixal - ((image < histogramRange[0] + i * bandWidth).sum() + (image >= histogramRange[0] + (i + 1) * bandWidth).sum()))
+    histRange = [histogramRange[0] + i * bandWidth for i in range(histogramLevel+1)]
+    frequency = [totalPixal - ((image < histRange[i]).sum() + (image >= histRange[i+1]).sum()) for i in range(histogramLevel)]
     histogram = normalize(np.array(frequency))
     return histogram
     

@@ -29,13 +29,15 @@ class testFunction(unittest.TestCase):
                           [1.0,0.0,1.0,0.0,1.0,0.0,1.0,0.0],[1.0,0.0,1.0,0.0,1.0,0.0,1.0,0.0],[1.0,0.0,1.0,0.0,1.0,0.0,1.0,0.0],[1.0,0.0,1.0,0.0,1.0,0.0,1.0,0.0]])
         histogram = computeHistogram(image, 32)
         self.assertAlmostEquals(histogram[0], 0.5)
+        for i in range(30):
+            self.assertAlmostEquals(histogram[i+1], 0.0)
         self.assertAlmostEquals(histogram[31], 0.5)
         self.assertAlmostEquals(histogram.sum(), 1.0)
         self.assertEquals(len(histogram), 32)
         
         histogram = computeHistogram(image, 32, [0.1, 0.9])
-        self.assertAlmostEquals(histogram[0], 0.0)
-        self.assertAlmostEquals(histogram[31], 0.0)
+        for i in range(32):
+            self.assertAlmostEquals(histogram[i], 0.0)
     
     def testCreatWhiteNoiseImage(self):
         image = np.array([[1.0,0.0,1.0,0.0,1.0,0.0,1.0,0.0], [1.0,0.0,1.0,0.0,1.0,0.0,1.0,0.0],[1.0,0.0,1.0,0.0,1.0,0.0,1.0,0.0],[1.0,0.0,1.0,0.0,1.0,0.0,1.0,0.0],
