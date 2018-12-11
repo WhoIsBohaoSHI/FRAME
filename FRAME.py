@@ -23,13 +23,15 @@ class FrameModel():
         numOfFilters = len(self.convolutionFilters)
         imageX = self.observedImage.shape[0]
         imageY = self.observedImage.shape[1]
-        observedHistgrams = cvl.convolutionAndComputeHistgram(histgramLevel, self.convolutionFilters, self.observedImage)
+        observedHistgrams = np.array([cvl.computeHistogram(cvl.convolutionFunction(self.convolutionFilters[i], self.observedImage), histgramLevel) for i in range(numOfFilters)])
+        histgramRange = [np.min(self.observedImage), np.max(self.observedImage) + 1e-10]
         lambdaParameter = np.zeros([numOfFilters, histgramLevel])
         synthesizedImage = cvl.creatWhiteNoiseImage(imageX, imageY)
-        synthesizedHistgrams = cvl.convolutionAndComputeHistgram(histgramLevel, self.convolutionFilters, synthesizedImage)
-
-        while all(np.array([cvl.euclideanDistance(synthesizedHistgrams[:,i], observedHistgrams[:,i]) for i in range(numOfFilters)]) > epsilon):
-            deltaLambda = np.array([synthesizedHistgrams[:,i] - observedHistgrams[:,i] for i in range(numOfFilters)])
+        synthesizedHistgrams = np.array([cvl.computeHistogram(cvl.convolutionFunction(self.convolutionFilters[i], synthesizedImage), histgramLevel, histgramRange) for i in range(numOfFilters)])
+        
+        j = 0
+        while all(np.array([cvl.euclideanDistance(synthesizedHistgrams[i,:], observedHistgrams[i,:]) for i in range(numOfFilters)]) > epsilon):
+            deltaLambda = np.array([synthesizedHistgrams[i,:] - observedHistgrams[i,:] for i in range(numOfFilters)])
             lambdaParameter = np.array([lambdaParameter[i] + deltaLambda[i] for i in range(numOfFilters)])       
             synthesizedImage = sampler(synthesizedImage, lambdaParameter)
             synthesizedHistgrams = self.computeHistgram(histgramLevel, self.convolutionFilters, synthesizedImage)
@@ -45,7 +47,7 @@ class GibbsSamplerForFrame():
         
     def densityFunction(self, filters, Lambda, image):
         numOfFilters = len(filters)
-        innerProduct = np.array([np.inner(Lambda[i], cv2.calcHist(cv2.filter2D(image,-1,filters[i]),channels=[0], mask = None, histSize = [self.histgramLevel], ranges=[0,256]).reshape([self.histgramLevel,])) for i in range(numOfFilters)])
+        innerProduct = np.array([np.inner(Lambda[i], cvl.computeHistogram(cvl.convolutionFunction(filters[i], image), self.histgramLevel)) for i in range(numOfFilters)])
         return np.exp(-(innerProduct.sum()))
         
     def __call__(self, synthesizedImage, lambdaParameter):
@@ -75,9 +77,10 @@ if __name__ == "__main__" :
     gaborFilter_1 /= gaborFilter_1.sum()
     gaborFilter_2 /= gaborFilter_2.sum()
     filters = [averageFilter, gaussianFilter, laplaceFilter, gaborFilter_1, gaborFilter_2]
-    
+    print('ok')
     frameModel = FrameModel(filters, observedImages[0])
     sampler = GibbsSamplerForFrame(filters, 1, 256, 32)
     #sampler = ImportanceSamplerForFrame(filters, 10000, 256, 32)
-    lambdaParameter, synthesizedImage = frameModel(32, sampler, 0.05)
+    lambdaParameter, synthesizedImage = frameModel(32, sampler, 0.001)
+    
     

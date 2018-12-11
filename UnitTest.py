@@ -65,6 +65,14 @@ class testFunction(unittest.TestCase):
         self.assertAlmostEquals(euclideanDistance(vector1, vector3), np.sqrt(2))
         self.assertAlmostEquals(euclideanDistance(vector2, vector3), np.sqrt(8))
         
+    def innerProduct(self):
+        vector1 = np.array([0, 0, 0])
+        vector2 = np.array([0, 1, -1])
+        vector3 = np.array([0, -1, 1])
+        self.assertAlmostEquals(np.inner(vector1, vector2), 0)
+        self.assertAlmostEquals(np.inner(vector1, vector3), 0)
+        self.assertAlmostEquals(np.inner(vector2, vector3), -2)
+        
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(testFunction)
     unittest.TextTestRunner(verbosity=2).run(suite)
