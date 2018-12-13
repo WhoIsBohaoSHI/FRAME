@@ -14,7 +14,7 @@ import scipy.stats as ss
 def creatWhiteNoiseImage(imageX, imageY):
     randomByteArray = bytearray(os.urandom(imageX * imageY))
     whiteNoise = np.array(randomByteArray).reshape([imageX, imageY]) 
-    return whiteNoise       
+    return whiteNoise.astype(float)
         
 def modifyImage(image, modyfyIndex, pixalValue):
     image[modyfyIndex[0],modyfyIndex[1]] = pixalValue
@@ -33,11 +33,14 @@ def convolutionFunction(convolutionFilters, image):
 
 def computeHistogram(image, histogramLevel = 32, histogramRange = None):
     totalPixal = image.shape[0] * image.shape[1]
+#    print(image)
+#    print(totalPixal)
     if histogramRange == None:
         histogramRange = [np.min(image), np.max(image) + 1e-10]
     bandWidth = (histogramRange[1] - histogramRange[0]) / histogramLevel
     histRange = [histogramRange[0] + i * bandWidth for i in range(histogramLevel+1)]
     frequency = [totalPixal - ((image < histRange[i]).sum() + (image >= histRange[i+1]).sum()) for i in range(histogramLevel)]
+#    print(frequency)
     histogram = normalize(np.array(frequency))
     return histogram
     
