@@ -36,7 +36,7 @@ def computeHistogram(image, histogramLevel = 32, histogramRange = None):
 #    print(image)
 #    print(totalPixal)
     if histogramRange == None:
-        histogramRange = [np.min(image), np.max(image) + 1e-10]
+        histogramRange = [0., 255.+1e-10]
     bandWidth = (histogramRange[1] - histogramRange[0]) / histogramLevel
     histRange = [histogramRange[0] + i * bandWidth for i in range(histogramLevel+1)]
     frequency = [totalPixal - ((image < histRange[i]).sum() + (image >= histRange[i+1]).sum()) for i in range(histogramLevel)]
