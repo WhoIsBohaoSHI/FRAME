@@ -36,10 +36,10 @@ class FrameModel():
         synthesizedHistgrams = np.array([cvl.computeHistogram(convolutionedSynthesizedImage[i], histgramLevel) for i in range(numOfFilters)])
         print(observedHistgrams,synthesizedHistgrams)
         j = 0
-        while (j < 2000) and (any(np.array([cvl.euclideanDistance(synthesizedHistgrams[i], observedHistgrams[i]) for i in range(numOfFilters)]) > epsilon)):
+        while (j < 3000) and (any(np.array([cvl.euclideanDistance(synthesizedHistgrams[i], observedHistgrams[i]) for i in range(numOfFilters)]) > epsilon)):
             deltaLambda = synthesizedHistgrams - observedHistgrams
             lambdaParameter.append(np.array(lambdaParameter[-1] + deltaLambda))     
-            print(deltaLambda[0])
+            print(deltaLambda)
             synthesizedImage = sampler(synthesizedImage, lambdaParameter)
             convolutionedSynthesizedImage = np.array(cvl.convolutionFunction(self.convolutionFilters, synthesizedImage))
             synthesizedHistgrams = np.array([cvl.computeHistogram(convolutionedSynthesizedImage[i], histgramLevel) for i in range(numOfFilters)])
@@ -67,7 +67,7 @@ class GibbsSamplerForFrame():
         for i in range(synthesizedImage.shape[0] * synthesizedImage.shape[1] * self.numOfGibbsSweeps):
             randomIndex = [random.randint(0, synthesizedImage.shape[0] - 1), random.randint(0, synthesizedImage.shape[1] - 1)]
             modifiedRange = [max(0,randomIndex[0]-self.filterSize),min(synthesizedImage.shape[0],randomIndex[0]+self.filterSize), max(0,randomIndex[1]-self.filterSize),min(synthesizedImage.shape[1], randomIndex[1]+self.filterSize)]
-            pval = np.array([self.densityFunction(self.convolutionFilters, lambdaParameter, cvl.modifyImage(synthesizedImage, randomIndex, (j + 0.5) * (256./self.numOfGreyLevel))[modifiedRange[0]:modifiedRange[1],modifiedRange[2]:modifiedRange[3]], 32) for j in range(self.numOfGreyLevel)])
+            pval = np.array([self.densityFunction(self.convolutionFilters, lambdaParameter, cvl.modifyImage(synthesizedImage, randomIndex, (j + 0.5) * (256./self.numOfGreyLevel))[modifiedRange[0]:modifiedRange[1],modifiedRange[2]:modifiedRange[3]], self.histgramLevel) for j in range(self.numOfGreyLevel)])
 #            print(pval)
             pval /= pval.sum()
             
@@ -80,9 +80,10 @@ class GibbsSamplerForFrame():
         return synthesizedImage
     
 class FeaturePursuit():
-    def __init__(self, filtersBank, observedImage):
+    def __init__(self, filtersBank, observedImage, numOfSelectedFeature):
         self.filtersBank = filtersBank
         self.observedImage = observedImage
+        self.numOfSelectedFeature = numOfSelectedFeature
     
     def __call__(self, histgramLevel, epsilon = 0.001):
         numOfFilters = len(self.filtersBank)
@@ -98,7 +99,7 @@ class FeaturePursuit():
         lambdaParameter  =  np.array([])
         
         distance = 1.
-        while (distance > epsilon) and (k < numOfFilters):
+        while (distance > epsilon) and (k < self.numOfSelectedFeature):
             indexSet = [index for index in filtersIndex if index not in selectedIndex]
             featureSet = [self.filtersBank[index] for index in indexSet]
             numOfFeatures = len(featureSet)
@@ -134,14 +135,14 @@ if __name__ == "__main__" :
     gaborFilter_1 /= gaborFilter_1.sum()
     gaborFilter_2 /= gaborFilter_2.sum()
 #    filters = [averageFilter, gaussianFilter, laplaceFilter, gaborFilter_1, gaborFilter_2]
-    filters = [averageFilter, laplaceFilter]
+    filters = [averageFilter]
     
-#    observedImages = np.array([cv2.imread('tex%d.jpg'%(i), 0) for i in range(numOfObservedImages)])
-    observedImages = np.zeros([1,40,40])
-    for i in range(8):
-        for j in range(8):
-            observedImages[0,5*i:5*(i+1),5*j:5*(j+1)] = gaussianFilter * 271.0
-    observedImages = observedImages * 255.0 / 41.0
+    observedImages = np.array([cv2.imread('tex%d.jpg'%(i), 0) for i in range(numOfObservedImages)])
+#    observedImages = np.zeros([1,40,40])
+#    for i in range(8):
+#        for j in range(8):
+#            observedImages[0,5*i:5*(i+1),5*j:5*(j+1)] = gaussianFilter * 271.0
+#    observedImages = observedImages * 255.0 / 41.0
     cv2.imshow('synthesized',observedImages[0]/255.0)
     cv2.waitKey(0)
     print('ok')
@@ -149,16 +150,18 @@ if __name__ == "__main__" :
     #FRAME algorithm 1 :
     
     frameModel = FrameModel(filters, observedImages[0])
-    sampler = GibbsSamplerForFrame(filters, 5, 32, 4, 8)
-    lambdaParameter, synthesizedImage = frameModel(32, sampler, 0.001, 0)
+    sampler = GibbsSamplerForFrame(filters, 5, 8, 4, 8)
+    lambdaParameter, synthesizedImage = frameModel(8, sampler, 0.001, 0)
     cv2.imshow('synthesized',synthesizedImage/255.0)
     cv2.waitKey(0)
     
     #FRAME algorithm 3 : feature pursuit
     
-#    featurePursuit = FeaturePursuit(filters, observedImages[0])
-#    selectedFeature, selectedIndex, synthesizedImage = featurePursuit(32, 0.001)
-    
-    
+#    featurePursuit = FeaturePursuit(filters, observedImages[0], 3)
+#    selectedFeature, selectedIndex, synthesizedImage = featurePursuit(8, 0.001)
+#    cv2.imshow('synthesized',synthesizedImage/255.0)
+#    cv2.waitKey(0)
+#    
+#    
     
     

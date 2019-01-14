@@ -79,7 +79,7 @@ if __name__ == "__main__" :
     gaborFilter_1 /= gaborFilter_1.sum()
     gaborFilter_2 /= gaborFilter_2.sum()
 #    filters = [averageFilter, gaussianFilter, laplaceFilter, gaborFilter_1, gaborFilter_2]
-    filters = [gaussianFilter]
+    filters = [averageFilter]
     
 #    observedImages = np.array([cv2.imread('tex%d.jpg'%(i), 0) for i in range(numOfObservedImages)])
     observedImages = np.zeros([1,40,40])
@@ -92,7 +92,7 @@ if __name__ == "__main__" :
     cv2.waitKey(0)
     print('ok')
     jureszEnsemble = GibbsSamplerForJureszEnsemble(observedImages[0], filters, 5, 8, 32, 2)
-    synthesizedImage = jureszEnsemble(10.0, 1e-5)
+    synthesizedImage = jureszEnsemble(10.0, 1.25)
     cv2.imshow('synthesized',synthesizedImage/255.0)
     cv2.waitKey(0)
     
