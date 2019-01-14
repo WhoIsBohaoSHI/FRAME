@@ -13,6 +13,7 @@ import random
 import numpy as np
 import os
 import scipy.stats as ss
+import functools as ft
 
 class FrameModel():
     def __init__(self, convolutionFilters, observedImage):
@@ -23,7 +24,7 @@ class FrameModel():
         numOfFilters = len(self.convolutionFilters)
         imageX = self.observedImage.shape[0]
         imageY = self.observedImage.shape[1]
-        convolutionedObservedImage = np.array(cvl.convolutionFunction(self.convolutionFilters, self.observedImage))
+        convolutionedObservedImage = np.array(cvl.convolutionFunction(self.convolutionFilters, self.observedImage), dtype='uint8')
         observedHistgrams = np.array([cvl.computeHistogram(convolutionedObservedImage[i], histgramLevel) for i in range(numOfFilters)])
 #        histgramRange = [np.min(self.observedImage), np.max(self.observedImage) + 1e-10]
         if isSave == 0:
@@ -32,16 +33,16 @@ class FrameModel():
         else:
             lambdaParameter = [lambdaParameterInit]
             synthesizedImage = synthesizedImageInit
-        convolutionedSynthesizedImage = np.array(cvl.convolutionFunction(self.convolutionFilters, synthesizedImage))
+        convolutionedSynthesizedImage = np.array(cvl.convolutionFunction(self.convolutionFilters, synthesizedImage), dtype='uint8')
         synthesizedHistgrams = np.array([cvl.computeHistogram(convolutionedSynthesizedImage[i], histgramLevel) for i in range(numOfFilters)])
         print(observedHistgrams,synthesizedHistgrams)
         j = 0
-        while (j < 3000) and (any(np.array([cvl.euclideanDistance(synthesizedHistgrams[i], observedHistgrams[i]) for i in range(numOfFilters)]) > epsilon)):
+        while (j < 5000) and (any(np.array([cvl.euclideanDistance(synthesizedHistgrams[i], observedHistgrams[i]) for i in range(numOfFilters)]) > epsilon)):
             deltaLambda = synthesizedHistgrams - observedHistgrams
             lambdaParameter.append(np.array(lambdaParameter[-1] + deltaLambda))     
             print(deltaLambda)
             synthesizedImage = sampler(synthesizedImage, lambdaParameter)
-            convolutionedSynthesizedImage = np.array(cvl.convolutionFunction(self.convolutionFilters, synthesizedImage))
+            convolutionedSynthesizedImage = np.array(cvl.convolutionFunction(self.convolutionFilters, synthesizedImage), dtype='uint8')
             synthesizedHistgrams = np.array([cvl.computeHistogram(convolutionedSynthesizedImage[i], histgramLevel) for i in range(numOfFilters)])
             print(j)
             j = j + 1
@@ -58,25 +59,25 @@ class GibbsSamplerForFrame():
         
     def densityFunction(self, filters, Lambda, image, histgramLevel):
         numOfFilters = len(filters)
-        convolutionedImage = np.array(cvl.convolutionFunction(filters, image))
+        convolutionedImage = np.array(cvl.convolutionFunction(filters, image), dtype='uint8')
         histograms = np.array([cvl.computeHistogram(convolutionedImage[i], histgramLevel) for i in range(numOfFilters)])
         innerProduct = np.array([np.inner(Lambda[-1][i], histograms[i]) for i in range(numOfFilters)])
         return np.exp(-(innerProduct.sum()))
+    
+    def sampling(self, synthesizedImage, i, lambdaParameter):
+        randomIndex = [random.randint(0, synthesizedImage.shape[0] - 1), random.randint(0, synthesizedImage.shape[1] - 1)]
+        modifiedRange = [max(0,randomIndex[0]-self.filterSize),min(synthesizedImage.shape[0],randomIndex[0]+self.filterSize), max(0,randomIndex[1]-self.filterSize),min(synthesizedImage.shape[1], randomIndex[1]+self.filterSize)]
+        pval = np.array([self.densityFunction(self.convolutionFilters, lambdaParameter, cvl.modifyImage(synthesizedImage, randomIndex, (j + 0.5) * (256./self.numOfGreyLevel))[modifiedRange[0]:modifiedRange[1],modifiedRange[2]:modifiedRange[3]], self.histgramLevel) for j in range(self.numOfGreyLevel)])
+        pval /= pval.sum()
+        greyLevel = np.argmax(np.random.multinomial(1, pval))
+        synthesizedImage = cvl.modifyImage(synthesizedImage, randomIndex, np.round(np.random.uniform(greyLevel * (256./self.numOfGreyLevel), (greyLevel+1) * (256./self.numOfGreyLevel)))) 
+        return synthesizedImage
         
     def __call__(self, synthesizedImage, lambdaParameter):
-        for i in range(synthesizedImage.shape[0] * synthesizedImage.shape[1] * self.numOfGibbsSweeps):
-            randomIndex = [random.randint(0, synthesizedImage.shape[0] - 1), random.randint(0, synthesizedImage.shape[1] - 1)]
-            modifiedRange = [max(0,randomIndex[0]-self.filterSize),min(synthesizedImage.shape[0],randomIndex[0]+self.filterSize), max(0,randomIndex[1]-self.filterSize),min(synthesizedImage.shape[1], randomIndex[1]+self.filterSize)]
-            pval = np.array([self.densityFunction(self.convolutionFilters, lambdaParameter, cvl.modifyImage(synthesizedImage, randomIndex, (j + 0.5) * (256./self.numOfGreyLevel))[modifiedRange[0]:modifiedRange[1],modifiedRange[2]:modifiedRange[3]], self.histgramLevel) for j in range(self.numOfGreyLevel)])
-#            print(pval)
-            pval /= pval.sum()
-            
-            greyLevel = np.argmax(np.random.multinomial(1, pval))
-            synthesizedImage = cvl.modifyImage(synthesizedImage, randomIndex, np.round(np.random.uniform(greyLevel * (256./self.numOfGreyLevel), (greyLevel+1) * (256./self.numOfGreyLevel)))) 
-#            print(np.round(np.random.uniform(greyLevel * (256./self.numOfGreyLevel), (greyLevel+1) * (256./self.numOfGreyLevel))))
-        print(pval)
-    #        print(i)
-            
+        K = [i for i in range(synthesizedImage.shape[0] * synthesizedImage.shape[1] * self.numOfGibbsSweeps)]
+        K[0] = synthesizedImage
+        samplingFunction = ft.partial(self.sampling, lambdaParameter = lambdaParameter)
+        synthesizedImage = ft.reduce(samplingFunction, K)
         return synthesizedImage
     
 class FeaturePursuit():
@@ -93,7 +94,7 @@ class FeaturePursuit():
         k = 0
         imageX = self.observedImage.shape[0]
         imageY = self.observedImage.shape[1]
-        convolutionedObservedImage = np.array(cvl.convolutionFunction(self.filtersBank, self.observedImage))
+        convolutionedObservedImage = np.array(cvl.convolutionFunction(self.filtersBank, self.observedImage), dtype='uint8')
         observedHistgrams = np.array([cvl.computeHistogram(convolutionedObservedImage[i], histgramLevel) for i in range(numOfFilters)])
         synthesizedImage = cvl.creatWhiteNoiseImage(imageX, imageY)
         lambdaParameter  =  np.array([])
@@ -103,7 +104,7 @@ class FeaturePursuit():
             indexSet = [index for index in filtersIndex if index not in selectedIndex]
             featureSet = [self.filtersBank[index] for index in indexSet]
             numOfFeatures = len(featureSet)
-            convolutionedSynthesizedImage = np.array(cvl.convolutionFunction(featureSet, synthesizedImage))
+            convolutionedSynthesizedImage = np.array(cvl.convolutionFunction(featureSet, synthesizedImage), dtype='uint8')
             synthesizedHistgrams = np.array([cvl.computeHistogram(convolutionedSynthesizedImage[i], histgramLevel) for i in range(numOfFeatures)])
             featureDistances = np.array([cvl.euclideanDistance(observedHistgrams[indexSet[i]], synthesizedHistgrams[i]) for i in range(numOfFeatures)])
             print(featureDistances)
@@ -135,9 +136,9 @@ if __name__ == "__main__" :
     gaborFilter_1 /= gaborFilter_1.sum()
     gaborFilter_2 /= gaborFilter_2.sum()
 #    filters = [averageFilter, gaussianFilter, laplaceFilter, gaborFilter_1, gaborFilter_2]
-    filters = [averageFilter]
+    filters = [averageFilter, laplaceFilter]
     
-    observedImages = np.array([cv2.imread('tex%d.jpg'%(i), 0) for i in range(numOfObservedImages)])
+    observedImages = np.array([cv2.imread('tex%d.jpg'%(i+1), 0) for i in range(numOfObservedImages)])
 #    observedImages = np.zeros([1,40,40])
 #    for i in range(8):
 #        for j in range(8):

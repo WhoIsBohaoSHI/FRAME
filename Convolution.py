@@ -31,17 +31,22 @@ def convolutionFunction(convolutionFilters, image):
     convolutionedImage = np.array([cv2.filter2D(image, -1, convolutionFilters[i]) for i in range(len(convolutionFilters))])
     return convolutionedImage
 
-def computeHistogram(image, histogramLevel = 32, histogramRange = None):
-    totalPixal = image.shape[0] * image.shape[1]
-#    print(image)
-#    print(totalPixal)
-    if histogramRange == None:
-        histogramRange = [0., 255.+1e-10]
-    bandWidth = (histogramRange[1] - histogramRange[0]) / histogramLevel
-    histRange = [histogramRange[0] + i * bandWidth for i in range(histogramLevel+1)]
-    frequency = [totalPixal - ((image < histRange[i]).sum() + (image >= histRange[i+1]).sum()) for i in range(histogramLevel)]
-#    print(frequency)
-    histogram = normalize(np.array(frequency))
-    return histogram
+#def computeHistogram(image, histogramLevel = 32, histogramRange = None):
+#    totalPixal = image.shape[0] * image.shape[1]
+#
+#    if histogramRange == None:
+#        histogramRange = [0., 255.+1e-10]
+#    bandWidth = (histogramRange[1] - histogramRange[0]) / histogramLevel
+#    histRange = [histogramRange[0] + i * bandWidth for i in range(histogramLevel+1)]
+#    frequency = [totalPixal - ((image < histRange[i]).sum() + (image >= histRange[i+1]).sum()) for i in range(histogramLevel)]
+#
+#    histogram = normalize(np.array(frequency))
+#    return histogram
+#
+def computeHistogram(image, histogramLevel = 8, histogramRange = [0,256]):
+    histogram = np.array(cv2.calcHist([image], channels=[], mask = None, histSize = [histogramLevel], ranges=histogramRange)).flatten()
+
+    return normalize(histogram)
+    
     
     
